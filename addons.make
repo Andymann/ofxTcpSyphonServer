@@ -1,0 +1,6 @@
+ofxDatGui
+ofxNetwork
+ofxNetworkUtils
+ofxPoco
+ofxTurboJpeg
+ofxXmlSettings
