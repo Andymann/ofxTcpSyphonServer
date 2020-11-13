@@ -1,4 +1,5 @@
 ofxDatGui
+ofxNDI
 ofxNetwork
 ofxNetworkUtils
 ofxPoco
