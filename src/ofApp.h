@@ -27,7 +27,9 @@ class ofApp : public ofBaseApp{
 		void gotMessage(ofMessage msg);
     
     void setupServer(int pPort);
-    void processNDI();
+    void processNDI(Boolean pCompress, int pPercent);
+    void sendData(ofImage pImage);
+    ofBuffer createImage(ofImage pImage);
     
     ofxTurboJpeg turbo;
     ofImage img1;    //turboJpg

@@ -3,7 +3,12 @@
 
 float fFramerate = 25.;
 int iCounter=0;
-Boolean bCompress = false;
+Boolean bCompress = true;
+
+static int COMPRESSION_TURBOJPEG = 0x04;
+static int COMPRESSION_JPEG = 0x00;
+
+
 //--------------------------------------------------------------
 void ofApp::setup(){
     //https://github.com/armadillu/ofxTurboJpeg/issues/12#issuecomment-406733837
@@ -43,7 +48,7 @@ void ofApp::setup(){
     */
     
     grabber_.setUseTexture(false);
-    grabber_.setup(ofxNDI::listSources()[0]);
+    grabber_.setup(ofxNDI::listSources()[0]);//----first ndi source
     grabber_.setDesiredFrameRate(fFramerate);
     
     //pixels_.allocate(2047, 2048, 3);
@@ -62,33 +67,89 @@ void ofApp::update(){
     if(grabber_.isConnected()) {
         grabber_.update();
         if(grabber_.isFrameNew()) {
-            processNDI();
+            processNDI(bCompress, 5);
         }
     }
 }
 
-void ofApp::processNDI(){
+void ofApp::processNDI(Boolean pCompress, int pPercent){
     ofPixels p1;
     ofPixels p2;
-    //pixels_.setImageType(OF_IMAGE_COLOR_ALPHA);
+    pixels_.setImageType(OF_IMAGE_COLOR);
     pixels_ = grabber_.getPixels();
                 
     pixels_.cropTo(p1, 0,0, pixels_.getWidth()/2, pixels_.getHeight()/2);
     pixels_.cropTo(p2, pixels_.getWidth()/2, pixels_.getHeight()/2, pixels_.getWidth()/2, pixels_.getHeight()/2);
 
-    img1.setFromPixels(p1);
-    img2.setFromPixels(p2);
-    
-    
-    if(bCompress){
-        turbo.compress(img1, 5, buff);
-        imgComp1.load(buff);
+    if(p1.size()>0){
+        img1.setFromPixels(p1);
+        img2.setFromPixels(p2);
         
-        turbo.compress(img2, 5, buff);
-        imgComp2.load(buff);
-    }else{
-        imgComp1 = img1;
-        imgComp2 = img2;
+        
+        if(pCompress){
+            //----that's some expensive sh*t
+            turbo.compress(img1, pPercent, buff);
+            imgComp1.load(buff);
+            
+            turbo.compress(img2, pPercent, buff);
+            imgComp2.load(buff);
+            
+        }else{
+            imgComp1 = img1;
+            imgComp2 = img2;
+        }
+        
+        //ofPixels px;
+        //px = imgComp1.getPixels();
+        //ofSaveImage(px, "test.jpg");
+       // ofSaveImage(imgComp1.getTexture().readToPixels(px), "testout.jpg");
+        imgComp1.setImageType(OF_IMAGE_GRAYSCALE);
+        createImage( imgComp1 );
+        sendData(imgComp1);
+    }
+}
+
+/*
+    Image rein, buffer array raus, mit header daten
+    adding 16byte-header to the imagedata.
+ */
+ofBuffer ofApp::createImage(ofImage pImage){
+    ofBuffer buff;
+    ofSaveImage(pImage.getPixelsRef(),buff,OF_IMAGE_FORMAT_JPEG);
+    char buff2[buff.size()+16];
+    char *p = (char *)buff.getData();
+    int size = buff.size() / sizeof(char);
+    //for(int i=0; i<buff.size(); i++){
+    for (int i = 0; i < size; i++) {
+        buff2[i+16] = p[i];
+    }
+    
+    
+    //ofLogNotice( ofToString(buff.size()) );
+
+    return (ofBuffer)buff2;
+}
+
+
+void ofApp::sendData(ofImage pImage){
+    //ofImage img;
+    //img.loadImage("tmp.jpg");
+    int iSize = pImage.getPixels().getTotalBytes();
+    int imageBytesToSend = /*7800*/ iSize;
+    int totalBytesSent = 0;
+    int messageSize = 200;
+    while( imageBytesToSend > 1 )
+    {
+
+        if(imageBytesToSend > messageSize) {
+            tcpServer.sendRawBytesToAll((char*) &pImage.getPixels()[totalBytesSent], messageSize);
+            imageBytesToSend -= messageSize;
+            totalBytesSent += messageSize;
+        } else {
+            tcpServer.sendRawBytesToAll( (char*) &pImage.getPixels()[totalBytesSent], imageBytesToSend);
+            totalBytesSent += imageBytesToSend;
+            imageBytesToSend = 0;
+        }
     }
 }
 
@@ -97,6 +158,7 @@ void ofApp::processNDI(){
 void ofApp::draw(){
         
     if(pixels_.isAllocated()) {
+        //ofImage(imgComp1).resize(<#int newWidth#>, <#int newHeight#>)
        ofImage(imgComp1).draw(0,0);
        ofImage(imgComp2).draw(imgComp2.getWidth(),imgComp2.getHeight());
     }
