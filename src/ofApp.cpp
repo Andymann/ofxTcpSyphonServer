@@ -1,12 +1,18 @@
 #include "ofApp.h"
 //using namespace ofxNDI::Recv;
 
-float fFramerate = 25.;
+float fFramerate = 25;
 int iCounter=0;
 Boolean bCompress = true;
 
 static int COMPRESSION_TURBOJPEG = 0x04;
 static int COMPRESSION_JPEG = 0x00;
+
+int gSize = 0;
+
+ofBuffer buf;
+ofImage imgOut;
+static std::vector<char> bufImg;
 
 
 //--------------------------------------------------------------
@@ -73,6 +79,7 @@ void ofApp::update(){
 }
 
 void ofApp::processNDI(Boolean pCompress, int pPercent){
+    int iCompression;
     ofPixels p1;
     ofPixels p2;
     pixels_.setImageType(OF_IMAGE_COLOR);
@@ -93,49 +100,76 @@ void ofApp::processNDI(Boolean pCompress, int pPercent){
             
             turbo.compress(img2, pPercent, buff);
             imgComp2.load(buff);
-            
+            iCompression=COMPRESSION_TURBOJPEG;
         }else{
             imgComp1 = img1;
             imgComp2 = img2;
+            iCompression=COMPRESSION_JPEG;
         }
         
         //ofPixels px;
         //px = imgComp1.getPixels();
         //ofSaveImage(px, "test.jpg");
        // ofSaveImage(imgComp1.getTexture().readToPixels(px), "testout.jpg");
+        
         imgComp1.setImageType(OF_IMAGE_GRAYSCALE);
-        createImage( imgComp1 );
-        sendData(imgComp1);
-    }
-}
-
+        //char* syphonImage = NULL;
+        /*char* syphonImage = */createImage( imgComp1, iCompression );
+        /*
+        char a = syphonImage[14];
+        char b = syphonImage[15];
+        char c = syphonImage[16];
+        char d = syphonImage[17];
+        */
+        
+        /*
+        char s = syphonImage[gSize-1];
+        char t = syphonImage[gSize];
+        char u = syphonImage[gSize+1];
+        char v = syphonImage[gSize+2];
+        
+        char w = syphonImage[gSize+14];
+        char x = syphonImage[gSize+15];
+        char y = syphonImage[gSize+16];
+        char z = syphonImage[gSize+17];
+        */
+        
 /*
-    Image rein, buffer array raus, mit header daten
-    adding 16byte-header to the imagedata.
- */
-ofBuffer ofApp::createImage(ofImage pImage){
-    ofBuffer buff;
-    ofSaveImage(pImage.getPixelsRef(),buff,OF_IMAGE_FORMAT_JPEG);
-    char buff2[buff.size()+16];
-    char *p = (char *)buff.getData();
-    int size = buff.size() / sizeof(char);
-    //for(int i=0; i<buff.size(); i++){
-    for (int i = 0; i < size; i++) {
-        buff2[i+16] = p[i];
+        //----Testweises anzeigen
+        char tmpBuff[gSize];
+        memset(tmpBuff, 0, sizeof tmpBuff);
+        //memcpy( tmpBuff, &syphonImage + 16, gSize );
+        for(int i=0; i<gSize; i++){
+            tmpBuff[i] = *&syphonImage[i+16];
+        }
+        buf.set((tmpBuff), gSize);
+        imgOut.load(buf);
+*/
+        
+        sendData( /*syphonImage*/ );
+        //free(&syphonImage);
     }
-    
-    
-    //ofLogNotice( ofToString(buff.size()) );
-
-    return (ofBuffer)buff2;
 }
 
 
-void ofApp::sendData(ofImage pImage){
-    //ofImage img;
-    //img.loadImage("tmp.jpg");
+
+void ofApp::sendData( /*char* pBuffer*/){
+    
+    //----Testweises anzeigen
+    
+    char tmpBuff[ bufImg.size()-16 ];
+    memset(tmpBuff, 0, sizeof tmpBuff);
+    //memcpy( tmpBuff, &syphonImage + 16, gSize );
+    for(int i=0; i<gSize; i++){
+        tmpBuff[i] = *&bufImg[i+16];
+    }
+    buf.set((tmpBuff), gSize);
+    imgOut.load(buf);
+    
+    
+    /*
     int iSize = pImage.getPixels().getTotalBytes();
-    int imageBytesToSend = /*7800*/ iSize;
+    int imageBytesToSend = iSize;
     int totalBytesSent = 0;
     int messageSize = 200;
     while( imageBytesToSend > 1 )
@@ -151,17 +185,116 @@ void ofApp::sendData(ofImage pImage){
             imageBytesToSend = 0;
         }
     }
+    */
 }
+
+
+
+
+/*
+    Image rein, buffer array raus, mit header daten
+    adding 16byte-header to the imagedata.
+ */
+/*char * */ void ofApp::createImage(ofImage pImage, int pCompression){
+    ofBuffer buff;
+    ofSaveImage(pImage.getPixelsRef(),buff,OF_IMAGE_FORMAT_JPEG);
+    //char bufImg[buff.size()+16];//= new char[buff.size()+16];
+   
+    
+    /*
+     //----mit array
+    //char *p = (char *)buff.getData();
+    char * p = buff.getBinaryBuffer();
+    int size = buff.size() / sizeof(char);
+    for (int i = 0; i < size; i++) {
+        bufImg[i+16] = p[i];
+    }
+     
+     bufImg[0] = pCompression;
+     bufImg[4]= (int)pImage.getWidth() & 0xff;
+     bufImg[5]= (int)pImage.getWidth() >> 8;
+     bufImg[8]= (int)pImage.getHeight() & 0xff;
+     bufImg[9]= (int)pImage.getHeight() >> 8;
+     bufImg[12]= (int) (buff.size()+16) & 0xff;
+     bufImg[13]= (int) (buff.size()+16) >> 8;
+
+     */
+    
+    bufImg.clear();
+    bufImg.push_back(pCompression);
+    bufImg.push_back(0);
+    bufImg.push_back(0);
+    bufImg.push_back(0);
+    bufImg.push_back((int)pImage.getWidth() & 0xff);
+    bufImg.push_back((int)pImage.getWidth() >> 8);
+    bufImg.push_back(0);
+    bufImg.push_back(0);
+    bufImg.push_back((int)pImage.getHeight() & 0xff);
+    bufImg.push_back((int)pImage.getHeight() >> 8);
+    bufImg.push_back(0);
+    bufImg.push_back(0);
+    bufImg.push_back((int) (buff.size()+16) & 0xff);
+    bufImg.push_back((int) (buff.size()+16) >> 8);
+    bufImg.push_back(0);
+    bufImg.push_back(0);
+    
+    char * p = buff.getBinaryBuffer();
+    int size = buff.size() / sizeof(char);
+    for (int i = 0; i < size; i++) {
+        bufImg.push_back(p[i]);
+    }
+
+    //ofLogNotice("test" + bufImg[17]);
+    //ofLogNotice("createImage:" + ofToString(pImage.getWidth()) + "*" + ofToString(pImage.getHeight()));
+    
+    //ofLogNotice("createImage:" + ofToString(bufImg[4]) + " " + ofToString(bufImg[5]) );
+    
+    //ofLogNotice("createImage size:" + ofToString(size));
+    
+    gSize = size;
+    
+    /*
+    //----bis hierhin funktioniert es
+    char tmpBuff[gSize];
+    memcpy( tmpBuff, bufImg + 16, gSize );
+    buf.set((tmpBuff), gSize);
+    imgOut.load(buf);
+    */
+    
+    
+    
+    //char *pRet = bufImg;
+    //char *pRet = &bufImg[0];
+    //return pRet;
+    //return(&bufImg[0]);
+    
+    /*
+    byte upper = ((Byte) (buff.size()+16) >> 8);
+    byte lower = ((Byte) (buff.size()+16) & 0xff);
+    */
+    
+}
+
+
 
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-        
+    /*
     if(pixels_.isAllocated()) {
         //ofImage(imgComp1).resize(<#int newWidth#>, <#int newHeight#>)
        ofImage(imgComp1).draw(0,0);
        ofImage(imgComp2).draw(imgComp2.getWidth(),imgComp2.getHeight());
     }
+    */
+/*
+        if(imgOut.isAllocated())
+            imgOut.draw(0,0);
+
+*/
+    
+    if(imgOut.isAllocated())
+        imgOut.draw(0,0);
 }
 
 //--------------------------------------------------------------
