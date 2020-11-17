@@ -10,9 +10,12 @@
 class ofApp : public ofBaseApp{
 
 	public:
-		void setup();
-		void update();
+		void xsetup();
+		void xupdate();
 		void draw();
+    
+    void setup();
+    void update();
 
 		void keyPressed(int key);
 		void keyReleased(int key);
@@ -26,10 +29,16 @@ class ofApp : public ofBaseApp{
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
     
-    void setupServer(int pPort);
+    void setupServer(string pIP, int pPort);
+    void xprocessNDI(Boolean pCompress, int pPercent);
+    void xsendData(/*char* pBuffer*/);
+    void xcreateImage(ofImage pImage, int pCompression);
+    
     void processNDI(Boolean pCompress, int pPercent);
     void sendData(/*char* pBuffer*/);
     void createImage(ofImage pImage, int pCompression);
+    
+    void test();
     
     ofxTurboJpeg turbo;
     ofImage img1;    //turboJpg
@@ -39,7 +48,7 @@ class ofApp : public ofBaseApp{
     ofTexture tex1;
     ofTexture tex2;
     
-    ofBuffer buff;
+    //ofBuffer buff;
     ofxTCPServer tcpServer;
     //ofxNDIreceiver ndiReceiver; // NDI receiver
 private:
