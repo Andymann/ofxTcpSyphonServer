@@ -10,12 +10,9 @@
 class ofApp : public ofBaseApp{
 
 	public:
-		void xsetup();
-		void xupdate();
 		void draw();
-    
-    void setup();
-    void update();
+        void setup();
+        void update();
 
 		void keyPressed(int key);
 		void keyReleased(int key);
@@ -30,10 +27,6 @@ class ofApp : public ofBaseApp{
 		void gotMessage(ofMessage msg);
     
     void setupServer(string pIP, int pPort);
-    void xprocessNDI(Boolean pCompress, int pPercent);
-    void xsendData(/*char* pBuffer*/);
-    void xcreateImage(ofImage pImage, int pCompression);
-    
     void processNDI(Boolean pCompress, int pPercent);
     void sendData(/*char* pBuffer*/);
     void createImage(ofImage pImage, int pCompression);
