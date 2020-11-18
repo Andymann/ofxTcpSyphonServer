@@ -1,9 +1,9 @@
 #include "ofApp.h"
 
-static float FRAMERATE = 5.;
+static float FRAMERATE = 25.;
 
 static Boolean COMPRESS = true;
-static int MESSAGESIZE = 200;
+static int MESSAGESIZE = 1000;
 static int COMPRESSION_TURBOJPEG = 0x04;
 static int COMPRESSION_JPEG = 0x00;
 
@@ -43,7 +43,7 @@ void ofApp::update(){
     if(grabber_.isConnected()) {
         grabber_.update();
         if(grabber_.isFrameNew()) {
-            processNDI(COMPRESS, 5);
+            processNDI(COMPRESS, 50);
             if( bBlink ){
                 ofSetBackgroundColor(0, 0, 0);
             }else{
